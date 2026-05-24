@@ -1,0 +1,23 @@
+# 环境变量（含密钥）
+.env
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Excel 临时文件
+~$*.xlsx
+*.xlsx~
+
+# 断点续传状态
+progress.json
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
+.DS_Store
+Thumbs.db

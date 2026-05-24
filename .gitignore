@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# environment
+.env
+
+# runtime data (auto-generated)
+citation_agent/progress.json
+citation_agent/gs_cookies.pkl
+citation_agent/screenshots/
+
+# Excel temp files
+~$*.xlsx
+*.xlsx~
+
+# Claude
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# system
+.DS_Store
+Thumbs.db
