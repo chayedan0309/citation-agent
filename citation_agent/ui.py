@@ -130,6 +130,8 @@ class ProgressUI:
             "\n",
             ("⚙️  ", ""),
             (action, ""),
+            "\n",
+            ("[dim]提示: 按 D 键可标记删除当前论文[/dim]", "dim"),
         )
         return Panel(header, title=caption, box=box.ROUNDED)
 

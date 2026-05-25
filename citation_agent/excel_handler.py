@@ -15,6 +15,7 @@ from config import (
     COLUMN_TITLE,
     COLUMN_CITATIONS,
     COLUMN_CITATION_FMT,
+    COLUMN_DELETED,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,12 +39,14 @@ class ExcelHandler:
         col_title: str = None,
         col_citations: str = None,
         col_citation_fmt: str = None,
+        col_deleted: str = None,
     ):
         self.excel_path = excel_path or EXCEL_PATH
         self.progress_path = progress_path or PROGRESS_PATH
         self.col_title = col_title or COLUMN_TITLE
         self.col_citations = col_citations or COLUMN_CITATIONS
         self.col_citation_fmt = col_citation_fmt or COLUMN_CITATION_FMT
+        self.col_deleted = col_deleted or COLUMN_DELETED
         self._update_count = 0
 
     # ─── 读取 ──────────────────────────────────────────
@@ -68,6 +71,13 @@ class ExcelHandler:
 
         # 筛选待处理行：引用次数为空或 NaN
         pending = df[df[self.col_citations].isna() | (df[self.col_citations] == "")].copy()
+
+        # 过滤已标记删除的行
+        if self.col_deleted in df.columns:
+            deleted_count = len(pending[pending[self.col_deleted] == "是"])
+            pending = pending[pending[self.col_deleted].isna() | (pending[self.col_deleted] != "是")]
+            if deleted_count:
+                logger.info("跳过 %d 篇已标记删除的论文", deleted_count)
 
         logger.info(
             "共 %d 条论文，待处理 %d 条",
@@ -222,6 +232,29 @@ class ExcelHandler:
     def reset_save_counter(self) -> None:
         """重置保存计数器"""
         self._update_count = 0
+
+    def mark_deleted(self, row_index: int) -> bool:
+        """在 Excel 中将指定行标记为已删除，返回是否标记成功"""
+        try:
+            wb = load_workbook(self.excel_path)
+            ws = wb.active
+
+            # 查找或创建"已删除"列
+            deleted_col = self._find_column(ws, self.col_deleted)
+            if deleted_col is None:
+                deleted_col = ws.max_column + 1
+                ws.cell(row=1, column=deleted_col, value=self.col_deleted)
+
+            excel_row = row_index + 2
+            ws.cell(row=excel_row, column=deleted_col, value="是")
+
+            wb.save(self.excel_path)
+            wb.close()
+            logger.info("已标记删除 row=%d", row_index)
+            return True
+        except Exception as e:
+            logger.error("标记删除失败 row=%d: %s", row_index, e)
+            return False
 
     def force_save_all(self, results: list[dict]) -> None:
         """

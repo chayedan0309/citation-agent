@@ -17,6 +17,11 @@ import logging
 from typing import Optional
 from urllib.parse import quote
 
+# 确保能导入上级目录的共享模块
+_parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _parent not in sys.path:
+    sys.path.insert(0, _parent)
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService

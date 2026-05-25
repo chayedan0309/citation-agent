@@ -3,7 +3,7 @@ import os
 
 # ─── 路径配置 ───────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EXCEL_PATH = os.path.join(os.path.dirname(BASE_DIR), "xlsx", "Deep Supervised Point Cloud Registration Literature (2021-2024).xlsx")
+EXCEL_PATH = os.path.join(os.path.dirname(BASE_DIR), "xlsx", "raw_manifest.xlsx")
 PROGRESS_PATH = os.path.join(BASE_DIR, "progress.json")
 COOKIE_PATH = os.path.join(BASE_DIR, "gs_cookies.pkl")
 
@@ -11,6 +11,7 @@ COOKIE_PATH = os.path.join(BASE_DIR, "gs_cookies.pkl")
 COLUMN_TITLE = "算法/论文简称"        # 论文短名称列
 COLUMN_CITATIONS = "引用次数"         # 引用次数列（待填写）
 COLUMN_CITATION_FMT = "完整学术引用格式"  # 完整引用格式列
+COLUMN_DELETED = "已删除"              # 删除标记列（用户按 D 键标记）
 
 # ─── 相似度校验 ────────────────────────────────────────
 SIMILARITY_THRESHOLD = 0.2        # 标题匹配通过阈值（降低到 20% 以适应整段引用搜索）

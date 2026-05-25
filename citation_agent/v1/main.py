@@ -1,6 +1,12 @@
 """学术引文自动化采集智能体 — 主调度器（含实时 UI）"""
 import sys
 import os
+
+# 使 v1/ 内的代码能导入上级目录的共享模块（config, excel_handler 等）
+_parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _parent not in sys.path:
+    sys.path.insert(0, _parent)
+
 import time
 import random
 import logging
@@ -17,7 +23,7 @@ from config import (
     GS_TIMEOUT,
 )
 from excel_handler import ExcelHandler
-from anti_detect import (
+from v1.anti_detect import (
     get_stealth_driver,
     random_delay,
     maybe_long_pause,
@@ -35,7 +41,7 @@ from anti_detect import (
     CaptchaDetectedError,
     RateLimitError,
 )
-from parser import extract_paper_title
+from v1.parser import extract_paper_title
 from similarity import check_title_match
 from report import print_report
 from ui import ProgressUI, UILogHandler
@@ -76,6 +82,18 @@ class CitationAgent:
                 self._ui.update(action=detail)
         return cb
 
+    def _check_delete_key(self) -> bool:
+        """非阻塞检查用户是否按下了 D 键（标记删除当前论文）"""
+        try:
+            import msvcrt
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+                if key in (b'd', b'D'):
+                    return True
+        except ImportError:
+            pass
+        return False
+
     # ─── 主循环 ────────────────────────────────────────
 
     def run(self) -> list[dict]:
@@ -108,6 +126,16 @@ class CitationAgent:
                 short_name = str(paper.get(self.excel_handler.col_title, "")).strip()
                 self._ui.update(paper=short_name, action="⏳ 准备检索...")
 
+                # 检查用户是否按 D 键标记删除
+                if self._check_delete_key():
+                    logger.info("  🗑 用户标记删除: %s", short_name)
+                    self.excel_handler.mark_deleted(idx)
+                    self.processed_count += 1
+                    s = self._ui.stats
+                    s["skipped"] += 1
+                    self._ui.update(advance=1, action="🗑 已删除，跳过本篇", **s)
+                    continue
+
                 self._process_single_paper(idx, paper, total, status_cb)
 
                 random_delay(status_cb=status_cb)
@@ -127,6 +155,17 @@ class CitationAgent:
                 for idx, paper in self._rate_limited_queue:
                     short_name = str(paper.get(self.excel_handler.col_title, "")).strip()
                     self._ui.update(paper=short_name, action="🔄 重试被限流跳过的论文...")
+
+                    # 同样支持 D 键删除
+                    if self._check_delete_key():
+                        logger.info("  🗑 用户标记删除: %s", short_name)
+                        self.excel_handler.mark_deleted(idx)
+                        self.processed_count += 1
+                        s = self._ui.stats
+                        s["skipped"] += 1
+                        self._ui.update(advance=1, action="🗑 已删除，跳过本篇", **s)
+                        continue
+
                     self._process_single_paper(idx, paper, total, status_cb, is_retry=True)
                     random_delay(status_cb=status_cb)
                     if self.excel_handler.should_save():
@@ -256,7 +295,7 @@ class CitationAgent:
             self._rate_limited_queue.append((idx, paper))
             s = self._ui.stats
             s["skipped"] += 1
-            self._ui.update(action="⏭ 跳过 (429 限流)", **s)
+            self._ui.update(advance=1, action="⏭ 跳过 (429 限流)", **s)
             return
         else:
             error_msg = gs_result.get("error", "搜索无结果") if gs_result else "搜索失败"
@@ -266,7 +305,7 @@ class CitationAgent:
             logger.error("  ✗ 失败: %s", error_msg)
             s = self._ui.stats
             s["failed"] += 1
-            self._ui.update(action=f"❌ 失败: {error_msg}", **s)
+            self._ui.update(advance=1, action=f"❌ 失败: {error_msg}", **s)
 
         self.results.append(result)
 
